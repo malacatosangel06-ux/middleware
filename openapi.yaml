@@ -1,0 +1,25 @@
+openapi : "3.0.0"
+info:
+  title: "UIDE INSCRICPCIONES API"
+  version: "2.0.0"
+  license:
+    name: "MIT"
+  identifier: "MIT"
+
+servers:
+url: "http://localhost:3000"
+description: "Servidor local"
+
+paths:
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Estado del servidor
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Servidor activo.
+        '401':
+          description: API key ausente o invalida.
+
