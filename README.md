@@ -50,42 +50,54 @@ Snapshots:   0 total
 Time:        1.631 s
 Ran all test suites.
 
+## Documentación de Endpoints Complementarios
 
-Endpoint documentado: GET /health
-Método HTTP
+### Endpoint: Verificación de Estado (`/health`)
+* **Método HTTP:** `GET`
+* **Ruta:** `/health`
+* **Autenticación:** Requerida a través de la cabecera `x-api-key`.
 
-GET /health
+#### Especificación de Entrada (Request)
+* **Cabeceras (Headers):**
+  * `x-api-key: <string>` (Clave de autenticación consumida por el middleware).
+* **Parámetros:** No requiere parámetros en ruta (*path*), consulta (*query*) ni cuerpo (*body*).
 
-Descripción
+#### Especificación de Salida (Responses)
+* **`200 OK` (Respuesta Exitosa):** Retorna un objeto JSON que confirma la operatividad del servidor junto con la marca de tiempo del sistema.
+  * `status` (String): Estado de actividad del servicio (ej. `"OK"`).
+  * `ts` (String, formato ISO 8601): Fecha y hora del servidor en entorno UTC.
+* **`401 Unauthorized` (Error de Autenticación):** Emitido cuando la cabecera es omitida o el valor provisto no coincide con las credenciales registradas.
+  * `error` (String): Mensaje de rechazo descriptivo.
 
-Verifica que el servidor esté funcionando correctamente.
+---
 
-Autenticación
+## Plan de Pruebas de Integración (Postman)
 
-Header obligatorio:
+El proceso de verificación del comportamiento del servidor frente a los contratos establecidos se realizó mediante solicitudes controladas en Postman, evaluando las respuestas tanto para casos de éxito como para excepciones de validación.
 
-x-api-key: secreto-demo
+### 1. Pruebas en Endpoint `/v1/inscripciones`
+* **Caso de Éxito (201 Created):** Envío del payload con formato estricto (atributos `estudianteId`, `materias` y `periodoid` en minúsculas). El backend procesa y devuelve la estructura confirmando el registro bajo el contrato v1.
+* **Caso de Error de Validación (400 Bad Request):** Envío de un payload con propiedades alteradas sintácticamente (uso de CamelCase `periodoId` en lugar del campo esperado `periodoid`). El sistema rechaza la petición exponiendo los campos obligatorios ausentes en el cuerpo de la solicitud.
 
-Parámetros de entrada
+### 2. Pruebas en Endpoint `/v2/inscripciones`
+* **Caso de Éxito (201 Created):** Transmisión de la solicitud incluyendo el identificador de estudiante, listado de asignaturas, identificador de periodo académico (siguiendo la nomenclatura CamelCase requerida en esta versión) y el atributo de negocio `metodo_pago` parametrizado dentro del catálogo permitido (`Efectivo`, `Transferencia`, `Debito`, `Credito`).
+* **Caso de Error Estructural (400 Bad Request):** Envío de datos incompletos o con un argumento no soportado para el método de pago (ej. `"Bitcoin"`). El middleware interceptor captura la anomalía y deniega el almacenamiento, retornando un mensaje de error explícito de tipología *enum*.
 
-No requiere parámetros de ruta, query ni cuerpo (body).
+---
 
-Respuesta exitosa (200)
-{
-  "status": "ok",
-  "ts": "2026-06-11T17:11:22.730Z"
-}
+## Análisis de Versionado de la API (Casos Aplicados a `/health`)
 
-Campos:
+### 1. Cambio Compatible con Versiones Anteriores (Backwards-Compatible)
+* **Modificación:** Adición del campo complementario `version` (tipo string) en la estructura de salida exitosa del endpoint `/health`.
+* **Justificación técnica:** Los sistemas clientes desarrollados para consumir la respuesta original continuarán parseando los atributos `status` y `ts` sin interrupciones. La introducción de una propiedad nueva no altera las posiciones ni los tipos de los datos preexistentes, permitiendo que la evolución del contrato coexista con implementaciones antiguas.
 
-status: estado del servidor.
-ts: fecha y hora en formato ISO 8601.
-Error 401 Unauthorized
-{
-  "error": "API key inválida o ausente"
-}
+### 2. Cambio Incompatible (Breaking Change)
+* **Modificación:** Sustitución del tipo de dato del atributo `status` en la respuesta de `/health`, migrando de una cadena de caracteres fija (`"ok"`) a una bandera de tipo booleano (`true`).
+* **Justificación técnica:** Este cambio rompe la compatibilidad hacia atrás debido a que los clientes tienen implementadas lógica de comparación estricta de cadenas o esquemas de deserialización rígidos. Al mutar el tipo primitivo a nivel de transporte, los flujos de control del cliente fallarán al procesar el tipo booleano, provocando excepciones en cascada en las aplicaciones consumidoras.
 
-Se produce cuando el cliente no envía la cabecera x-api-key o su valor es incorrecto.
+
+
+
 
 ## Versionado
 
