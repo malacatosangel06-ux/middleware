@@ -169,3 +169,7 @@ Servidor corriendo en `http://localhost:3000`. Autenticacion: header `x-api-key:
 ### Escenario 4 — POST /v2/inscripciones con payment_method inválido (esperado: 400)
 
 ![v2 400 valor inválido](docs/screenshots/04-v2-400-inválido.png)
+
+## Reflexión sobre el Consumo del Contrato OpenAPI
+
+Si otro equipo comenzara a consumir nuestra API mañana, el principal cambio técnico que realizaría en el contrato OpenAPI sería robustecer las especificaciones de seguridad mediante la declaración global de componentes `securitySchemes`. Actualmente, la validación de la API Key ocurre mediante lógica aislada en el middleware (`x-api-key`); documentar este comportamiento de manera nativa en OpenAPI permitiría a los consumidores generar clientes automáticos (SDKs) que incluyan los encabezados de autenticación por defecto. Asimismo, endurecería las validaciones del esquema definiendo formatos estrictos (como `format: uuid` para el `estudianteId`) e incorporaría una sección exhaustiva de respuestas globales para códigos de error comunes (como `401 Unauthorized` y `422 Unprocessable Entity`) con estructuras normalizadas, minimizando así la fricción de integración y asegurando un acuerdo de nivel de servicio (SLA) claro para los desarrolladores externos.
