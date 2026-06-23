@@ -1,87 +1,111 @@
-openapi: "3.1.0"
+openapi: 3.0.3
 info:
-  title: UIDE Inscripciones API
-  version: "2.0.0"
+  title: API de Inscripciones y Middlewares
+  description: API para la gestión de inscripciones de estudiantes con control de versiones y validaciones.
+  version: 2.0.0
   license:
-    name: MIT
-    identifier: MIT
-
+    name: ISC
+    url: https://opensource.org/licenses/ISC
 servers:
-  - url: http://{host}:3000
-    description: Desarrollo local
+  - url: http://{entorno}:{puerto}
+    description: Servidor de Desarrollo
     variables:
-      host:
+      entorno:
         default: localhost
-
+      puerto:
+        default: "3000"
 paths:
   /health:
     get:
-      operationId: healthCheck
-      summary: Estado del servidor
-      security:
-        - ApiKeyAuth: []
+      summary: Verificar el estado del servidor
+      description: Retorna el estado actual del backend y la hora del servidor.
+      operationId: checkHealth
+      security: [] # El endpoint de salud es público y no requiere API Key
       responses:
         '200':
-          description: Servidor activo.
+          description: Servidor operativo.
           content:
             application/json:
               schema:
                 type: object
-                required: [status]
                 properties:
                   status:
                     type: string
-                additionalProperties: false
-              example:
-                status: "OK"
+                    example: ok
+                  ts:
+                    type: string
+                    format: date-time
+                    example: "2026-06-23T14:59:00.000Z"
         '401':
-          description: API key ausente o inválida.
+          description: No autorizado (agregado para cumplir estándar 4XX).
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                error: "API key ausente o inválida."
+        '500':
+          description: Error interno del servidor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /v1/inscripciones:
     post:
-      operationId: crearInscripcionV1
-      summary: Crear inscripción (contrato v1)
-      security:
-        - ApiKeyAuth: []
+      summary: Crear una inscripción (Versión 1)
+      description: Registra una inscripción con validaciones básicas de campos obligatorios.
+      operationId: createInscripcionV1
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/InscripcionV1'
-            example:
-              estudianteId: "123e4567-e89b-12d3-a456-426614174000"
-              materias: ["LTI_05A_458"]
-              periodoid: "2026-1"
+              type: object
+              required:
+                - estudianteId
+                - materias
+                - periodoid
+              properties:
+                estudianteId:
+                  type: string
+                  example: "123e4567-e89b-12d3-a456-426614174000"
+                materias:
+                  type: array
+                  items:
+                    type: string
+                  example: ["LTI_05A_458"]
+                periodoid:
+                  type: string
+                  example: "2026-1"
       responses:
         '201':
-          description: Inscripción creada exitosamente en v1.
+          description: Inscripción creada exitosamente en V1.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RespuestaExitosaV1'
-              example:
-                version: "v1"
-                message:
-                  estudianteId: "123e4567-e89b-12d3-a456-426614174000"
-                  materias: ["LTI_05A_458"]
-                  periodoid: "2026-1"
+                type: object
+                properties:
+                  version:
+                    type: string
+                    example: v1
+                  message:
+                    type: object
+                    properties:
+                      estudianteId:
+                        type: string
+                      materias:
+                        type: array
+                        items:
+                          type: string
+                      periodoid:
+                        type: string
         '400':
-          description: Payload inválido (faltan campos obligatorios).
+          description: Petición inválida por falta de campos obligatorios.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              example:
-                error: "campos requeridos: estudianteId, materias, periodoid"
         '401':
-          description: API key ausente o inválida.
+          description: No autorizado. API Key inválida o ausente.
           content:
             application/json:
               schema:
@@ -89,73 +113,75 @@ paths:
 
   /v2/inscripciones:
     post:
-      operationId: crearInscripcionV2
-      summary: Crear inscripción con método de pago (contrato v2)
-      security:
-        - ApiKeyAuth: []
+      summary: Crear una inscripción (Versión 2)
+      description: Registra una inscripción incluyendo el método de pago obligatorio y validado.
+      operationId: createInscripcionV2
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/InscripcionV2'
-            examples:
-              peticionExitosa:
-                summary: Petición Válida
-                value:
-                  estudianteId: "123e4567-e89b-12d3-a456-426614174000"
-                  materias: ["LTI_05A_458"]
-                  periodoId: "2026-1"
-                  metodo_pago: "Debito"
-              errorCampos:
-                summary: Error por campos faltantes
-                value:
-                  estudianteId: "123e4567-e89b-12d3-a456-426614174000"
-                  materias: []
-                  periodoId: ""
-                  metodo_pago: "Debito"
-              errorEnum:
-                summary: Error por método de pago inválido
-                value:
-                  estudianteId: "123e4567-e89b-12d3-a456-426614174000"
-                  materias: ["LTI_05A_458"]
-                  periodoId: "2026-1"
-                  metodo_pago: "cash"
+              type: object
+              required:
+                - estudianteId
+                - materias
+                - periodoId
+                - metodo_pago
+              properties:
+                estudianteId:
+                  type: string
+                  example: "uuid-123"
+                materias:
+                  type: array
+                  items:
+                    type: string
+                  example: ["LTI_05A_458"]
+                periodoId:
+                  type: string
+                  example: "2026-1"
+                metodo_pago:
+                  type: string
+                  enum: [Efectivo, Transferencia, Debito, Credito]
+                  example: "Efectivo"
       responses:
         '201':
-          description: Inscripción creada exitosamente en v2.
+          description: Inscripción creada exitosamente en V2.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RespuestaExitosaV2'
-              example:
-                version: "v2"
-                message:
-                  estudianteId: "123e4567-e89b-12d3-a456-426614174000"
-                  materias: ["LTI_05A_458"]
-                  periodoId: "2026-1"
-                  metodo_pago: "Debito"
+                type: object
+                properties:
+                  version:
+                    type: string
+                    example: v2
+                  message:
+                    type: object
+                    properties:
+                      estudianteId:
+                        type: string
+                      materias:
+                        type: array
+                        items:
+                          type: string
+                      periodoId:
+                        type: string
+                      metodo_pago:
+                        type: string
         '400':
-          description: Petición errónea debido a campos ausentes o método de pago no soportado.
+          description: Campos faltantes o método de pago no permitido.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                errorCamposFaltantes:
-                  summary: Respuesta para campos ausentes
-                  value:
-                    error: "Campos requeridos: estudianteId, materias, periodoId, metodo_pago"
-                errorMetodoInvalido:
-                  summary: Respuesta para método de pago inválido
-                  value:
-                    error: "El metodo de pago insertado debe ser: Efectivo, Transferencia, Debito o Credito"
         '401':
-          description: API key ausente o inválida.
+          description: No autorizado. API Key inválida o ausente.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+
+security:
+  - ApiKeyAuth: []
 
 components:
   securitySchemes:
@@ -163,90 +189,11 @@ components:
       type: apiKey
       in: header
       name: x-api-key
-
+      description: Llave secreta requerida por el middleware de autenticación de la aplicación.
   schemas:
-    InscripcionV1:
-      type: object
-      required: [estudianteId, materias, periodoid]
-      properties:
-        estudianteId:
-          type: string
-          format: uuid
-        materias:
-          type: array
-          items:
-            type: string
-          minItems: 1
-        periodoid:
-          type: string
-      additionalProperties: false
-
-    InscripcionV2:
-      type: object
-      required: [estudianteId, materias, periodoId, metodo_pago]
-      properties:
-        estudianteId:
-          type: string
-          format: uuid
-        materias:
-          type: array
-          items:
-            type: string
-          minItems: 1
-        periodoId:
-          type: string
-        metodo_pago:
-          type: string
-          enum: [Efectivo, Transferencia, Debito, Credito]
-      additionalProperties: false
-
-    RespuestaExitosaV1:
-      type: object
-      required: [version, message]
-      properties:
-        version:
-          type: string
-        message:
-          type: object
-          required: [estudianteId, materias, periodoid]
-          properties:
-            estudianteId:
-              type: string
-              format: uuid
-            materias:
-              type: array
-              items:
-                type: string
-            periodoid:
-              type: string
-
-    RespuestaExitosaV2:
-      type: object
-      required: [version, message]
-      properties:
-        version:
-          type: string
-        message:
-          type: object
-          required: [estudianteId, materias, periodoId, metodo_pago]
-          properties:
-            estudianteId:
-              type: string
-              format: uuid
-            materias:
-              type: array
-              items:
-                type: string
-            periodoId:
-              type: string
-            metodo_pago:
-              type: string
-              enum: [Efectivo, Transferencia, Debito, Credito]
-
     ErrorResponse:
       type: object
-      required: [error]
       properties:
         error:
           type: string
-      additionalProperties: false
+          example: "Campos requeridos: estudianteId, materias, periodoId, metodo_pago"
