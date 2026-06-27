@@ -175,3 +175,36 @@ Servidor corriendo en `http://localhost:3000`. Autenticacion: header `x-api-key:
 Si otro equipo comenzara a consumir nuestra API mañana, el principal cambio técnico que realizaría en el contrato OpenAPI sería robustecer las especificaciones de seguridad mediante la declaración global de componentes `securitySchemes`. Actualmente, la validación de la API Key ocurre mediante lógica aislada en el middleware (`x-api-key`); documentar este comportamiento de manera nativa en OpenAPI permitiría a los consumidores generar clientes automáticos (SDKs) que incluyan los encabezados de autenticación por defecto. Asimismo, endurecería las validaciones del esquema definiendo formatos estrictos (como `format: uuid` para el `estudianteId`) e incorporaría una sección exhaustiva de respuestas globales para códigos de error comunes (como `401 Unauthorized` y `422 Unprocessable Entity`) con estructuras normalizadas, minimizando así la fricción de integración y asegurando un acuerdo de nivel de servicio (SLA) claro para los desarrolladores externos.
 
 ![Validación de Redocly](docs/screenshots/redocly-lint.png)
+
+
+## Seguridad JWT (PE-2.3)
+
+### Generar un token de prueba
+
+```bash
+# Con el secreto por defecto del laboratorio:
+TOKEN=$(node generate-token.mjs)
+
+# Con secreto personalizado:
+JWT_SECRET=mi-secreto-largo TOKEN=$(node generate-token.mjs)
+```
+
+### Pruebas Postman
+
+#### Prueba 1 — Token válido (201 Created)
+
+Token generado con `generate-token.mjs`, firma HS256 correcta. El middleware valida la firma y permite el paso al pipeline de rutas.
+
+![Prueba 1 - Token válido](docs/screenshots/firma_creada.png)
+
+#### Prueba 2 — Firma inválida (401 Unauthorized)
+
+Token con firma adulterada. El middleware recalcula la firma esperada con `timingSafeEqual` y al no coincidir responde 401.
+
+![Prueba 2 - Firma inválida](docs/screenshots/firma_invalida.png)
+
+#### Prueba 3 — Algoritmo alg:none (401 Unauthorized)
+
+Token con `{"alg":"none"}` en el header. El middleware verifica el campo `alg` antes de validar la firma y lo rechaza inmediatamente para prevenir el ataque de confusión de algoritmo.
+
+![Prueba 3 - alg:none](docs/screenshots/nopermitido.png)
